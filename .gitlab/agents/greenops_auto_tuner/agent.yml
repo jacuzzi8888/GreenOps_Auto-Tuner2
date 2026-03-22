@@ -1,0 +1,14 @@
+name: "GreenOps Auto-Tuner"
+description: "Analyzes Terraform configurations for carbon footprint reduction and FinOps optimization during Merge Requests."
+visibility: private
+
+# The system prompt controlling the Anthropic model's behavior inside GitLab Duo
+prompt: "prompt.md"
+
+# Bind external tools via Model Context Protocol (MCP)
+tools:
+  mcp:
+    - name: "greenops-mcp"
+      transport: "sse"
+      url: "https://greenops-auto-tuner.vercel.app/sse"
+      # The MCP Server automatically exposes its endpoints: get_gcp_pricing, analyze_infrastructure

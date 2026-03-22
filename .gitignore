@@ -24,3 +24,5 @@ jest-out.txt
 
 # TypeScript cache
 *.tsbuildinfo
+
+.vercel

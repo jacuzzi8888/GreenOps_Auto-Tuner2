@@ -41,6 +41,12 @@ export interface MrAttributes {
     source_branch: string;
     target_branch: string;
     title: string;
+    last_commit?: {
+        id: string;
+        message: string;
+        author_email: string;
+        author_name: string;
+    };
 }
 
 /** The top-level GitLab Merge Request webhook payload. */
@@ -55,4 +61,46 @@ export interface MrNoteResponse {
     id: number;
     body: string;
     created_at: string;
+}
+
+/** 
+ * Phase 2: Pricing & Analysis Types
+ */
+
+export interface PricingEntry {
+    sku: string;
+    region: string;
+    pricePerHour: number;
+    pricePerMonth: number;
+    currency: string;
+    source: string;
+}
+
+export interface PricingResult {
+    found: boolean;
+    entry?: PricingEntry;
+    needsReview: boolean;
+    reason?: string;
+}
+
+export interface SavingsEstimate {
+    currency: string;
+    monthly: number;
+    source: string;
+}
+
+export interface CarbonEstimate {
+    unit: string;
+    monthly: number;
+}
+
+export interface AnalysisProposal {
+    file_path: string;
+    new_content?: string;
+    explanation: string;
+    evidence: string;
+    estimated_savings?: SavingsEstimate;
+    estimated_carbon_delta?: CarbonEstimate;
+    confidence: number;
+    needs_review?: boolean;
 }

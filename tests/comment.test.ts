@@ -1,7 +1,6 @@
-import { formatAnalysisComment, formatNoInfraComment } from '../src/comment';
+import { formatBasicAnalysisComment, formatNoInfraComment, formatProposalComment } from '../src/comment';
 import { postMrComment } from '../src/gitlab';
 import axios from 'axios';
-import { GitLabChange } from '../src/types';
 
 // Mock axios for postMrComment tests
 jest.mock('axios');
@@ -9,18 +8,16 @@ const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('Comment Formatting', () => {
 
-    it('should format an analysis comment with infra file list', () => {
-        const mockFiles: GitLabChange[] = [
-            { new_path: 'infra/main.tf', old_path: 'infra/main.tf', a_mode: '', b_mode: '', new_file: false, renamed_file: false, deleted_file: false, diff: '' },
-            { new_path: 'deploy/config.yaml', old_path: 'deploy/config.yaml', a_mode: '', b_mode: '', new_file: false, renamed_file: false, deleted_file: false, diff: '' },
-        ];
-
-        const comment = formatAnalysisComment(mockFiles);
+    it('should format a basic analysis comment with file count', () => {
+        const comment = formatBasicAnalysisComment(3);
 
         expect(comment).toContain('GreenOps Auto-Tuner');
-        expect(comment).toContain('2 infrastructure file(s)');
-        expect(comment).toContain('`infra/main.tf`');
-        expect(comment).toContain('`deploy/config.yaml`');
+        expect(comment).toContain('3 infrastructure file(s)');
+    });
+
+    it('should format a proposal comment with zero proposals', () => {
+        const comment = formatProposalComment([]);
+        expect(comment).toContain('already highly optimized');
     });
 
     it('should format a no-infra comment', () => {

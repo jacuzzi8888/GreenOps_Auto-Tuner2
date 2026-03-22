@@ -1,19 +1,25 @@
 {
-  "name": "greenops_auto-tuner",
+  "name": "greenops-auto-tuner",
   "version": "1.0.0",
   "description": "Provide an at-a-glance overview, quickstart, and demo steps for GreenOps Auto-Tuner.",
   "main": "src/server.ts",
   "scripts": {
     "test": "jest",
-    "dev": "tsx src/server.ts"
+    "dev": "tsx src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "smoke": "tsx scripts/smoke-test.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@modelcontextprotocol/sdk": "^1.27.1",
     "axios": "^1.13.6",
     "dotenv": "^17.3.1",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

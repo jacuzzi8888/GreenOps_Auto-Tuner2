@@ -1,96 +1,80 @@
-import express, { Request, Response, NextFunction } from 'express';
+import express from 'express';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import { z } from 'zod';
+import { analyzeInfraChanges } from './analyzer';
+import { getLiveGcpPrice } from './pricing';
 import dotenv from 'dotenv';
-import { fetchMrChanges, filterInfraFiles, postMrComment } from './gitlab';
-import { GitLabWebhookPayload } from './types';
-import { formatAnalysisComment, formatNoInfraComment } from './comment';
 
 dotenv.config();
 
 const app = express();
-
 app.use(express.json());
 
-// Token validation middleware
-const validateGitlabToken = (req: Request, res: Response, next: NextFunction) => {
-  const token = req.header('X-Gitlab-Token');
-  const expectedToken = process.env.GITLAB_WEBHOOK_TOKEN;
-
-  if (!expectedToken) {
-    console.warn('GITLAB_WEBHOOK_TOKEN is not set in environment variables.');
-    return res.status(500).json({ error: 'Server configuration error: Webhook token not set' });
-  }
-
-  if (!token || token !== expectedToken) {
-    console.log(`[Auth] Rejected webhook request. Provided token: ${token ? '***' : 'None'}`);
-    return res.status(401).json({ error: 'Unauthorized: Invalid or missing X-Gitlab-Token' });
-  }
-
-  next();
-};
-
-app.get('/health', (req, res) => {
-    res.json({status: 'ok'});
+const mcpServer = new McpServer({
+  name: "GreenOps Auto-Tuner",
+  version: "1.0.0"
 });
 
-// Webhook Ingress
-app.post('/webhook/gitlab', validateGitlabToken, async (req: Request, res: Response) => {
-  try {
-    const payload = req.body as GitLabWebhookPayload;
-    
-    // Check if it's an MR event
-    if (payload.object_kind !== 'merge_request') {
-        console.log(`[Webhook] Ignored non-MR event type: ${payload.object_kind}`);
-        return res.status(200).json({ message: 'Event ignored' });
+// Configure Google Cloud Pricing Tool
+mcpServer.tool(
+  "get_gcp_pricing",
+  "Fetches live Google Cloud Compute Engine pricing via the GCP Billing API.",
+  {
+    machineType: z.string().describe("GCP machine type or SKU (e.g. 'e2-micro', 'c3-standard-4')"),
+    region: z.string().default('us-central1').describe("GCP Region mapping")
+  },
+  async ({ machineType, region }) => {
+    const result = await getLiveGcpPrice(machineType, region as string);
+    if (!result.found) {
+      return { content: [{ type: "text", text: `Pricing not found: ${result.reason}` }] };
     }
+    return { content: [{ type: "text", text: JSON.stringify(result.entry) }] };
+  }
+);
 
-    const mrAttributes = payload.object_attributes;
-    const projectId = payload.project?.id;
-    const mrIid = mrAttributes?.iid;
-    const action = mrAttributes?.action;
-    const state = mrAttributes?.state;
-
-    // We typically care about open or updated MRs
-    if (state !== 'opened') {
-        console.log(`[Webhook] Ignored MR state: ${state}`);
-        return res.status(200).json({ message: `Ignored MR state: ${state}` });
-    }
-
-    console.log(`[Webhook] Received valid MR event: Project ${projectId}, MR !${mrIid}, Action: ${action}`);
-
-    // Task G2: MR Data Retrieval
+// Configure Terraform Carbon Analyzer Tool
+mcpServer.tool(
+  "analyze_infrastructure",
+  "Analyzes Terraform changes for carbon/cost savings using Gemini 3.0 Flash. Returns JSON optimizations.",
+  {
+    files: z.array(
+      z.object({
+        new_path: z.string(),
+        old_path: z.string().optional(),
+        diff: z.string()
+      })
+    ).describe("Array of changed file paths and text diffs.")
+  },
+  async ({ files }) => {
     try {
-        const mrData = await fetchMrChanges(projectId, mrIid);
-        const changedFiles = mrData.changes;
-        
-        console.log(`[GitLab] !${mrIid} contains ${changedFiles.length} changed files.`);
-        
-        const infraFiles = filterInfraFiles(changedFiles);
-        console.log(`[GitLab] !${mrIid} contains ${infraFiles.length} supported infra files.`);
-        
-        // Task G3: Post MR Comment
-        const commentBody = infraFiles.length > 0
-            ? formatAnalysisComment(infraFiles)
-            : formatNoInfraComment();
-
-        await postMrComment(projectId, mrIid, commentBody);
-        console.log(`[Webhook] Comment posted to MR !${mrIid}`);
-
-        res.status(200).json({ 
-            message: 'Webhook processed and comment posted',
-            project_id: projectId,
-            mr_iid: mrIid,
-            infra_files_count: infraFiles.length,
-            comment_posted: true
-        });
-    } catch (apiError: any) {
-        console.error(`[GitLab API Error] Failed to process MR !${mrIid}:`, apiError.message);
-        res.status(200).json({ message: 'Webhook received, but failed to process MR data', comment_posted: false });
+        const proposals = await analyzeInfraChanges(files as any);
+        return { content: [{ type: "text", text: JSON.stringify(proposals, null, 2) }] };
+    } catch (e: any) {
+        return { content: [{ type: "text", text: `Error: ${e.message}` }] };
     }
+  }
+);
 
-  } catch (error) {
-    console.error(`[Webhook Error] Failed to process payload:`, error);
-    res.status(500).json({ error: 'Internal server error processing webhook' });
+// SSE Transport for GitLab Duo compatibility
+let transport: SSEServerTransport | null = null;
+
+// The endpoint GitLab connects to to establish the event stream
+app.get('/sse', async (req, res) => {
+  transport = new SSEServerTransport('/message', res);
+  await mcpServer.server.connect(transport);
+});
+
+// The endpoint GitLab posts client messages to
+app.post('/message', async (req, res) => {
+  if (transport) {
+    await transport.handlePostMessage(req, res);
+  } else {
+    res.status(503).json({ error: "SSE Transport not initialized. Please connect to /sse first." });
   }
 });
+
+// Basic ping for healthchecks
+app.get('/health', (req, res) => res.json({ status: 'ok', type: 'MCP Server' }));
 
 export default app;

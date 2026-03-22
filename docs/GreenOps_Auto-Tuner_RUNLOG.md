@@ -41,5 +41,11 @@ System.Collections.Hashtable.Sections
 ## 2026-03-19
 - Expanded specs and all MVP docs to detailed versions.
 
+## 2026-03-20
+- Implemented Phase 2: Intelligence & Analysis.
+- Added live AWS Pricing API integration (G4).
+- Added Gemini-powered infra analysis (G5) with structured optimization reports.
+- Verified TypeScript compilation.
+
 
 

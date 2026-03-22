@@ -1,7 +1,8 @@
 import app from './app';
 
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 
-app.listen(port, () => {
-  console.log(`GreenOps Auto-Tuner Agent listening on port ${port}`);
+app.listen(PORT, () => {
+    console.log(`GreenOps Auto-Tuner MCP Server is actively listening on port ${PORT}`);
+    console.log(`- Connect your MCP Client to http://localhost:${PORT}/sse`);
 });
