@@ -1,8 +1,12 @@
 import * as fs from 'fs';
 import { logAudit, createPayloadHash, AuditRecord } from '../src/audit';
 
-jest.mock('fs');
-const mockedFs = fs as jest.Mocked<typeof fs>;
+jest.mock('fs', () => ({
+    promises: {
+        appendFile: jest.fn()
+    }
+}));
+const mockedAppendFile = fs.promises.appendFile as jest.Mock;
 
 describe('Task G8: Audit Logging', () => {
 
@@ -32,23 +36,23 @@ describe('Task G8: Audit Logging', () => {
     it('should NOT write when ENABLE_AUDIT_LOG is not set', async () => {
         delete process.env.ENABLE_AUDIT_LOG;
         await logAudit(sampleRecord);
-        expect(mockedFs.appendFileSync).not.toHaveBeenCalled();
+        expect(mockedAppendFile).not.toHaveBeenCalled();
     });
 
     it('should NOT write when ENABLE_AUDIT_LOG is "false"', async () => {
         process.env.ENABLE_AUDIT_LOG = 'false';
         await logAudit(sampleRecord);
-        expect(mockedFs.appendFileSync).not.toHaveBeenCalled();
+        expect(mockedAppendFile).not.toHaveBeenCalled();
     });
 
     it('should write a JSON line when ENABLE_AUDIT_LOG is "true"', async () => {
         process.env.ENABLE_AUDIT_LOG = 'true';
-        mockedFs.appendFileSync.mockImplementation(() => {});
+        mockedAppendFile.mockResolvedValue(undefined);
 
         await logAudit(sampleRecord);
 
-        expect(mockedFs.appendFileSync).toHaveBeenCalledTimes(1);
-        const writtenContent = mockedFs.appendFileSync.mock.calls[0]![1] as string;
+        expect(mockedAppendFile).toHaveBeenCalledTimes(1);
+        const writtenContent = mockedAppendFile.mock.calls[0][1] as string;
         const parsed = JSON.parse(writtenContent.trim());
         expect(parsed.event).toBe('mr_analysis');
         expect(parsed.projectId).toBe(42);
@@ -57,7 +61,7 @@ describe('Task G8: Audit Logging', () => {
 
     it('should not crash when file write fails', async () => {
         process.env.ENABLE_AUDIT_LOG = 'true';
-        mockedFs.appendFileSync.mockImplementation(() => { throw new Error('disk full'); });
+        mockedAppendFile.mockRejectedValue(new Error('disk full'));
 
         // Should not throw
         await expect(logAudit(sampleRecord)).resolves.toBeUndefined();

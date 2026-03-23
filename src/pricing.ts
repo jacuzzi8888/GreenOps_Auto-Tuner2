@@ -24,9 +24,9 @@ export async function getLiveGcpPrice(instanceType: string, region: string = 'us
         console.warn('⚠️ No GCP_API_KEY provided. Falling back to local GCP mock pricing.');
         const price = fallbackPrice(instanceType);
         return { 
-            found: true, 
+            found: false, 
             needsReview: true,
-            entry: { sku: instanceType, region, pricePerHour: price, pricePerMonth: price * 730, currency: 'USD', source: 'Mock Fallback' } 
+            reason: `GCP_API_KEY omitted. Local mock fallback would be $${price * 730}/mo`
         };
     }
 
@@ -59,9 +59,9 @@ export async function getLiveGcpPrice(instanceType: string, region: string = 'us
         console.warn(`⚠️ Exact GCP SKU not found for ${instanceType}. Using fallback.`);
         const price = fallbackPrice(instanceType);
         return { 
-            found: true, 
+            found: false, 
             needsReview: true,
-            entry: { sku: instanceType, region, pricePerHour: price, pricePerMonth: price * 730, currency: 'USD', source: 'Mock Fallback' } 
+            reason: `SKU not found in live catalog. Local mock fallback would be $${price * 730}/mo`
         };
     } catch (error: any) {
         console.error('Error fetching GCP live pricing:', error.message);

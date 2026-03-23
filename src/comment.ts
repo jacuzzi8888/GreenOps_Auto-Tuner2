@@ -36,7 +36,7 @@ export function formatProposalComment(proposals: AnalysisProposal[]): string {
             `**Recommendation:** ${p.explanation}`,
             ``,
             `**Evidence:**`,
-            `> \`${p.evidence}\``,
+            `> \`${p.evidence.replace(/`/g, "'")}\``,
             ``,
             savingsText,
             carbonText !== '' ? carbonText : null,

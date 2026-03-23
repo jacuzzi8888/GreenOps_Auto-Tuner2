@@ -1,30 +1,32 @@
-import { validateProposalSchema, parseProposalJson, enforceGuards, MAX_INFRA_FILES, MAX_DIFF_LENGTH } from '../src/analyzer';
+import { parseProposalJson, enforceGuards, MAX_INFRA_FILES, MAX_DIFF_LENGTH } from '../src/analyzer';
 import { GitLabChange } from '../src/types';
 
 describe('Analyzer Hardening and Guards', () => {
 
     describe('JSON Validation (G9)', () => {
         it('should pass valid proposal schema', () => {
-            const valid = [{
-                file_path: 'main.tf',
-                explanation: 'Test',
-                evidence: 'line',
-                confidence: 0.9,
-                estimated_carbon_delta: { unit: 'kgCO2e', monthly: -10 }
-            }];
-            expect(validateProposalSchema(valid)).toBeNull();
+            const raw = `\`\`\`json
+[
+    {
+        "file_path": "main.tf",
+        "explanation": "Test",
+        "evidence": "line",
+        "confidence": 0.9,
+        "estimated_carbon_delta": { "unit": "kgCO2e", "monthly": -10 }
+    }
+]
+\`\`\``;
+            const parsed = parseProposalJson(raw);
+            expect(parsed).toHaveLength(1);
         });
 
-        it('should reject non-array', () => {
-            expect(validateProposalSchema({})).toContain('Expected a JSON array');
+        it('should reject non-array payload', () => {
+            expect(() => parseProposalJson('{"file_path": "a"}')).toThrow();
         });
 
         it('should reject missing required fields', () => {
-            const invalid = [{
-                file_path: 'main.tf',
-                // missing explanation, evidence, confidence
-            }];
-            expect(validateProposalSchema(invalid)).toContain('missing required field "explanation"');
+            const invalid = `[{"file_path": "main.tf"}]`;
+            expect(() => parseProposalJson(invalid)).toThrow();
         });
 
         it('should strip markdown fences and parse json', () => {

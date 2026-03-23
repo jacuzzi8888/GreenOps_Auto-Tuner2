@@ -12,8 +12,15 @@ export async function commitOptimizedFile(
     branch: string,
     filePath: string,
     newContent: string,
-    commitMessage: string
+    commitMessage: string,
+    confidence: number
 ): Promise<void> {
+    if (process.env.APPLY_MODE !== 'true') {
+        throw new Error('APPLY_MODE is disabled in server configuration.');
+    }
+    if (confidence < 0.8) {
+        throw new Error(`Confidence score ${confidence} is below the strict 0.8 threshold required for automated commits.`);
+    }
     const token = process.env.GITLAB_API_TOKEN;
     if (!token) {
         throw new Error('GITLAB_API_TOKEN is not configured');

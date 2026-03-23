@@ -28,7 +28,7 @@ export async function logAudit(record: AuditRecord): Promise<void> {
 
     try {
         const line = JSON.stringify(record) + '\n';
-        fs.appendFileSync(AUDIT_LOG_PATH, line, 'utf-8');
+        await fs.promises.appendFile(AUDIT_LOG_PATH, line, 'utf-8');
         console.log(`[Audit] Logged ${record.event} for MR !${record.mrIid} (${record.result})`);
     } catch (error: any) {
         // Audit logging should never crash the main pipeline

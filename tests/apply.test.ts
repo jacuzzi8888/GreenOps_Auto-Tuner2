@@ -10,7 +10,7 @@ describe('Task G7: Apply Mode', () => {
 
     beforeEach(() => {
         jest.resetModules();
-        process.env = { ...originalEnv };
+        process.env = { ...originalEnv, APPLY_MODE: 'true' };
     });
 
     afterAll(() => {
@@ -20,7 +20,7 @@ describe('Task G7: Apply Mode', () => {
     it('should throw error if GITLAB_API_TOKEN is missing', async () => {
         delete process.env.GITLAB_API_TOKEN;
         await expect(
-            commitOptimizedFile(1, 'feature', 'main.tf', 'content', 'msg')
+            commitOptimizedFile(1, 'feature', 'main.tf', 'content', 'msg', 0.9)
         ).rejects.toThrow('GITLAB_API_TOKEN is not configured');
     });
 
@@ -33,7 +33,8 @@ describe('Task G7: Apply Mode', () => {
             'feature-branch',
             'infra/main.tf',
             'resource "aws_instance" "web" { instance_type = "t3.small" }',
-            '[greenops-autotuner] Optimize infra/main.tf'
+            '[greenops-autotuner] Optimize infra/main.tf',
+            0.9
         );
 
         expect(mockedAxios.post).toHaveBeenCalledWith(
@@ -58,7 +59,21 @@ describe('Task G7: Apply Mode', () => {
         mockedAxios.post.mockRejectedValueOnce(new Error('403 Forbidden'));
 
         await expect(
-            commitOptimizedFile(1, 'feature', 'main.tf', 'content', 'msg')
+            commitOptimizedFile(1, 'feature', 'main.tf', 'content', 'msg', 0.9)
         ).rejects.toThrow('403 Forbidden');
+    });
+    it('should throw error if confidence is below 0.8', async () => {
+        process.env.GITLAB_API_TOKEN = 'test_token';
+        await expect(
+            commitOptimizedFile(1, 'feature', 'main.tf', 'content', 'msg', 0.7)
+        ).rejects.toThrow('Confidence score 0.7 is below the strict 0.8 threshold required for automated commits.');
+    });
+
+    it('should throw error if APPLY_MODE is false', async () => {
+        process.env.APPLY_MODE = 'false';
+        process.env.GITLAB_API_TOKEN = 'test_token';
+        await expect(
+            commitOptimizedFile(1, 'feature', 'main.tf', 'content', 'msg', 0.9)
+        ).rejects.toThrow('APPLY_MODE is disabled in server configuration.');
     });
 });
