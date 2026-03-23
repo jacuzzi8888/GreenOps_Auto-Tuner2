@@ -14,7 +14,8 @@ export interface AuditRecord {
     result: 'success' | 'no_infra' | 'analysis_error' | 'api_error';
 }
 
-const AUDIT_LOG_PATH = process.env.AUDIT_LOG_PATH || path.join(process.cwd(), 'audit.log');
+const AUDIT_LOG_PATH = process.env.AUDIT_LOG_PATH || 
+    (process.env.VERCEL ? '/tmp/audit.log' : path.join(process.cwd(), 'audit.log'));
 
 /**
  * Task G8: Audit Logging

@@ -17,7 +17,7 @@ function getGeminiClient() {
         throw new Error('GEMINI_API_KEY is not configured in .env');
     }
     const genAI = new GoogleGenerativeAI(apiKey);
-    return genAI.getGenerativeModel({ model: 'gemini-3.0-flash' });
+    return genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
 }
 
 /**

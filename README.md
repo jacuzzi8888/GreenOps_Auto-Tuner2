@@ -6,7 +6,7 @@ GreenOps Auto-Tuner is an event-driven AI agent that analyzes GitLab Merge Reque
 
 ## Core Capabilities
 
-- **Automated Cost Optimization:** Identifies inefficient Compute Engine instances and Kubernetes configurations.
+yu- **Automated Cost Optimization:** Identifies inefficient Compute Engine instances and Kubernetes configurations.
 - **Verified Cloud Pricing:** Cross-references LLM suggestions against the live Google Cloud Billing Catalog API so savings are mathematically proven.
 - **Carbon Impact Estimates:** Provides generalized carbon footprint delta (kgCO2e) estimates for the proposed changes.
 - **Loop Prevention & Safety:** Operates entirely asynchronously and includes strict loop-prevention guards to avoid cascading commits.
