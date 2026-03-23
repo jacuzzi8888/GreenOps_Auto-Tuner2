@@ -21,6 +21,8 @@ Thumbs.db
 *.log
 error.txt
 jest-out.txt
+out.txt
+report.json
 
 # TypeScript cache
 *.tsbuildinfo
