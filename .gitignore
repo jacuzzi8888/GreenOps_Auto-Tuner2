@@ -17,14 +17,43 @@ dist/
 .DS_Store
 Thumbs.db
 
+# Agent workspace directories
+.opencode/
+.cursor/
+.windsurf/
+.aider/
+.copilot/
+.agentic/
+
+# Internal agent template/scaffolding files
+AGENTS.md
+AGENTS.yml
+*AGENT*.md
+*CONTEXT*.md
+*TASKS*.md
+*CHECKLIST*.md
+*RUNLOG*.md
+*PLAYBOOK*.md
+*DEMO_SCRIPT*.md
+
+# GitLab agent configs
+.gitlab/
+
 # Debug / temp files
 *.log
 error.txt
 jest-out.txt
 out.txt
 report.json
+jest-results.json
+test_output.txt
+exploratory_results.txt
+models_list.txt
+models_list_utf8.txt
+nul
 
 # TypeScript cache
 *.tsbuildinfo
 
-.vercel
+# Vercel
+.vercel/

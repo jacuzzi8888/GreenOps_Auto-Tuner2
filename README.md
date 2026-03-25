@@ -1,68 +1,130 @@
-# 🌿 GreenOps Auto-Tuner
+# GreenOps Auto-Tuner
 
-GreenOps Auto-Tuner is an event-driven AI agent that analyzes GitLab Merge Requests for infrastructure-as-code changes (Terraform/YAML). It intercepts changes, identifies over-provisioned resources, verifies live AWS pricing, and posts verifiable cost and carbon reduction proposals directly as MR comments.
+An MCP server that analyzes GitLab Merge Requests for infrastructure-as-code changes, identifies over-provisioned GCP resources using live pricing data, and posts cost/carbon reduction proposals as MR comments.
 
-![Demo](docs/demo-placeholder.png) <!-- Update with actual demo screenshot -->
+## Features
 
-## Core Capabilities
+- **IaC Diff Analysis** — Parses Terraform and YAML changes in GitLab MRs to detect over-provisioned Compute Engine and GKE resources
+- **Live GCP Pricing Verification** — Cross-references AI-generated suggestions against the Google Cloud Billing Catalog API for mathematically proven savings
+- **Carbon Impact Estimates** — Calculates generalized kgCO2e deltas for proposed infrastructure changes
+- **MCP Protocol Server** — Exposes tools via the Model Context Protocol (MCP) with Server-Sent Events transport
+- **Auto-Apply Mode** — Optionally commits high-confidence optimization proposals back to the source branch
+- **Usage Tracking & Billing** — Built-in plan enforcement, rate limiting, and a real-time usage dashboard
+- **Loop Prevention** — Strict guards prevent cascading commits when running in agent environments
+- **Audit Logging** — Writes analysis metadata to structured JSON lines for compliance and debugging
 
-yu- **Automated Cost Optimization:** Identifies inefficient Compute Engine instances and Kubernetes configurations.
-- **Verified Cloud Pricing:** Cross-references LLM suggestions against the live Google Cloud Billing Catalog API so savings are mathematically proven.
-- **Carbon Impact Estimates:** Provides generalized carbon footprint delta (kgCO2e) estimates for the proposed changes.
-- **Loop Prevention & Safety:** Operates entirely asynchronously and includes strict loop-prevention guards to avoid cascading commits.
-- **Auto-Apply Mode**: Can be configured to automatically commit high-confidence proposals back to the source branch.
+## Tech Stack
 
----
+| Component | Technology |
+|-----------|-----------|
+| Runtime | Node.js + TypeScript |
+| Server | Express 5 |
+| AI Model | Google Gemini via `@google/generative-ai` |
+| Protocol | Model Context Protocol (MCP) SDK |
+| Cloud API | Google Cloud Billing Catalog API |
+| Validation | Zod |
+| Testing | Jest + Supertest |
+| Deployment | Docker, Vercel |
 
-## 🚀 Hackathon Judges: How to Test
+## Prerequisites
 
-Welcome! This agent has been built to run on the GitLab Duo Agent Platform utilizing the Model Context Protocol (MCP) and Google Cloud's Gemini 3.0 Flash.
+- Node.js 18+
+- A Google Gemini API key ([Get one here](https://aistudio.google.com/apikey))
+- A GCP API key with Cloud Billing Catalog API access ([Guide](docs/Getting_Variables_Guide.md))
+- A GitLab API token with `api` scope
 
-### 1. Triggering the Agent
-Because the actual agent logic is hosted securely in our `agent.yml` workflow, you can test it directly within the `gitlab-ai-hackathon` group environments.
-1. Open a Merge Request modifying a Terraform `.tf` file containing a GCP Compute Instance constraint (e.g. `n2-standard-4`).
-2. Type `@gitlab-bot` or follow the standard Duo Agent triggering process for your MR.
-3. The Auto-Tuner will stream a request securely to our deployed Vercel MCP Server (`https://greenops-auto-tuner.vercel.app/sse`).
-4. The Agent will analyze the changes, fetch live metrics from the Google Cloud Billing API, and post an infrastructure optimization plan directly on the MR.
+## Getting Started
 
-### 2. Run the MCP Server Locally (Optional)
-If you wish to examine the LLM execution logic outside the GitLab Duo Agent Platform:
 ```bash
-git clone https://gitlab.com/gitlab-ai-hackathon/greenops-auto-tuner.git
+git clone <repo-url>
+cd GreenOps_Auto-Tuner
 npm install
-cp .env.example .env # Add your GCP_API_KEY and GEMINI_API_KEY
+cp .env.example .env
+```
+
+Fill in your API keys in `.env`:
+
+```env
+PORT=3000
+MCP_API_TOKEN=your_secure_mcp_secret
+GITLAB_API_TOKEN=glpat-your-gitlab-api-token
+GEMINI_API_KEY=your_gemini_api_key
+GCP_API_KEY=your_gcp_api_key
+APPLY_MODE=false
+```
+
+```bash
 npm run dev
 ```
-The Express SSE Server will spin up on port `3000`.
 
-## 🏗 Architecture & Design
+The server starts on `http://localhost:3000`:
+- MCP endpoint: `/mcp`
+- Usage API: `/api/usage`
+- Dashboard: `/dashboard.html`
 
-Curious how it works under the hood?
-- **[Architecture & Threat Model](docs/GreenOps_Auto-Tuner_ARCHITECTURE.md)** - Details on the components, data flow, and security boundaries.
-- **[MVP Contract](docs/GreenOps_Auto-Tuner_MVP_CONTRACT.md)** - The core features supported in this prototype.
+## Docker
 
-## 🐳 Docker Deployment
-
-To run this in a production-like environment using Docker:
 ```bash
 docker-compose up -d --build
 ```
-This will build the multi-stage TypeScript Dockerfile and run the agent securely as a non-root user.
 
----
+Runs the server as a non-root user in a multi-stage build.
 
 ## Testing
-
-The project has comprehensive unit and end-to-end integration tests (covering AI parsing, Diff truncation, and MCP scenarios).
 
 ```bash
 npm test
 ```
 
-## License & Declarations
+## Project Structure
 
-**MIT License**
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+```
+GreenOps_Auto-Tuner/
+├── src/
+│   ├── server.ts            # Entry point, graceful shutdown
+│   ├── app.ts               # Express app setup and middleware
+│   ├── config.ts            # Environment validation
+│   ├── analyzer.ts          # MR diff parsing and resource analysis
+│   ├── pricing.ts           # GCP Billing API integration
+│   ├── apply.ts             # Auto-apply commit logic
+│   ├── audit.ts             # Audit log writer
+│   ├── comment.ts           # MR comment formatting
+│   ├── types.ts             # Shared TypeScript types
+│   ├── lib/
+│   │   └── usageTracker.ts  # Usage tracking, plan enforcement
+│   ├── middleware/
+│   │   └── usageMiddleware.ts
+│   └── routes/
+│       └── usageRoutes.ts   # Usage/billing API routes
+├── tests/
+│   ├── analyzer.test.ts
+│   ├── app.test.ts
+│   ├── apply.test.ts
+│   └── audit.test.ts
+├── scripts/
+│   ├── smoke-test.ts        # Smoke test for MCP tools
+│   ├── test-client.ts       # MCP client test harness
+│   └── list-models.ts       # List available Gemini models
+├── public/                  # Static assets (dashboard HTML)
+├── docs/                    # Architecture and API documentation
+├── .env.example             # Environment variable template
+├── Dockerfile               # Multi-stage production build
+├── docker-compose.yml
+├── vercel.json              # Vercel deployment config
+├── tsconfig.json
+├── jest.config.js
+└── package.json
+```
 
-**Developer Certificate of Origin**
-By contributing to this project, you agree that all original work is submitted under GitLab's Developer Certificate of Origin (version 1.1). All commits are signed off accordingly.
+## Documentation
+
+- [Architecture](docs/GreenOps_Auto-Tuner_ARCHITECTURE.md)
+- [API Specification](docs/GreenOps_Auto-Tuner_API_SPEC.md)
+- [Data Model](docs/GreenOps_Auto-Tuner_DATA_MODEL.md)
+- [Test Plan](docs/GreenOps_Auto-Tuner_TEST_PLAN.md)
+- [Getting GCP/Gemini Variables](docs/Getting_Variables_Guide.md)
+- [GitLab Webhook Setup](docs/GitLab_Webhook_Setup.md)
+
+## License
+
+MIT — see [LICENSE](LICENSE) for details.
